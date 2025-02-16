@@ -1,0 +1,129 @@
+---
+title: "wordle"
+format: html
+editor: visual
+---
+
+```{r}
+load_dictionary <- function(filename) {
+  words <- readLines(filename, warn = FALSE)  
+  return(words)
+}
+
+
+scrabble_words <- load_dictionary("collins-scrabble-words-2019.txt")
+google_words <- load_dictionary("google-10000-english-usa-no-swears.txt")
+
+
+valid_list <- scrabble_words
+solution_list <- google_words
+
+str(valid_list)
+str(solution_list)
+
+
+solution_list <- intersect(solution_list, valid_list)
+
+
+print(paste("Number of valid words:", length(valid_list)))
+print(paste("Number of possible solutions:", length(solution_list)))
+print(head(solution_list, 10))
+
+
+pick_solution <- function(word_list, word_length = 5) {
+  filtered_words <- word_list[nchar(word_list) == word_length]
+ 
+  if (length(filtered_words) == 0) {
+    stop("No words found with the specified length.")
+  }
+ 
+  chosen_word <- sample(filtered_words, 1)
+  return(chosen_word)  
+}
+
+
+solution <- pick_solution(solution_list)
+
+
+print(paste("Chosen solution:", solution))
+
+
+evaluate_guess <- function(guess, solution) {
+  feedback <- rep("-", nchar(solution))  
+  solution_chars <- unlist(strsplit(solution, ""))
+  guess_chars <- unlist(strsplit(guess, ""))
+ 
+ 
+  for (i in 1:length(guess_chars)) {
+    if (guess_chars[i] == solution_chars[i]) {
+      feedback[i] <- "*"
+      solution_chars[i] <- NA  
+    }
+  }
+ 
+ 
+  for (i in 1:length(guess_chars)) {
+    if (feedback[i] == "-" && guess_chars[i] %in% solution_chars) {
+      feedback[i] <- "+"
+      match_idx <- which(solution_chars == guess_chars[i])[1]
+      solution_chars[match_idx] <- NA  
+    }
+  }
+ 
+  return(paste(feedback, collapse = ""))
+}
+
+
+play_wordle <- function(solution, valid_list, num_guesses = 6) {
+  cat("Welcome to Wordle!\n")
+  cat("You have", num_guesses, "chances to guess a word of length", nchar(solution), ".\n")
+ 
+  remaining_letters <- LETTERS  
+  guess_history <- list()  
+ 
+  for (attempt in 1:num_guesses) {
+    cat("\nAttempt", attempt, "of", num_guesses, "\n")
+    cat("Letters left:", paste(remaining_letters, collapse = " "), "\n")
+   
+ 
+    guess <- readline(prompt = paste("Enter guess number", attempt, ": "))
+    guess <- toupper(trimws(guess))  
+   
+ 
+    print(paste("Debug: Your input was ->", guess))
+   
+ 
+    if (nchar(guess) != nchar(solution) || !(guess %in% valid_list)) {
+      cat("Invalid guess! Please enter a valid word of length", nchar(solution), "\n")
+      next
+    }
+   
+
+    feedback <- evaluate_guess(guess, solution)
+   
+ 
+    guess_history[[attempt]] <- list(guess = guess, feedback = feedback)
+   
+
+    cat("Feedback:", feedback, "\n")
+   
+
+    guessed_letters <- unlist(strsplit(guess, ""))
+    remaining_letters <- setdiff(remaining_letters, guessed_letters)
+   
+ 
+    if (guess == solution) {
+      cat("Congratulations! You guessed the word correctly in", attempt, "attempts!\n")
+      return(guess_history)
+    }
+  }
+ 
+
+  cat("\nSorry, you've used all", num_guesses, "attempts. The correct word was:", solution, "\n")
+  return(guess_history)
+}
+
+
+play_wordle(solution, valid_list)
+
+```
